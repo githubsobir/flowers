@@ -1,11 +1,17 @@
+import 'dart:convert';
+import 'dart:math';
 import 'dart:ui';
-
 import 'package:flowers/data/dataprovider/mainhttp.dart';
 import 'package:flowers/data/models/authmodel.dart';
 import 'package:flowers/data/models/mainmodel.dart';
+import 'package:flowers/data/models/productmodel.dart';
+import 'package:flowers/presentation/pages/mainpage/viewflowers.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+
 import 'package:infinite_carousel/infinite_carousel.dart';
+import 'package:intl/intl.dart';
+import 'package:like_button/like_button.dart';
 
 class MainPage extends StatefulWidget {
   @override
@@ -14,31 +20,66 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   String getValue;
-  List<GetDataMain> getDataMain = new List();
+  List<GetDataMain> getDataMain = [];
+  List<ProductModel> _productModel = [];
   AuthData _authData;
+
+  // var boxs = Hive.box("online");
+
   InfiniteScrollController controller;
   int selectedIndex = 0;
+  Map<String, String> map = {};
+  List<bool> likeButton = [];
 
-  void loginAuth(){
-    MainHttps.getMain(api: MainHttps.urlAuth, params: MainHttps.emptParams())
-        .then((value) => {
-      _authResponse(response: value),
-    });
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    generatorRandom();
+    loginAuth();
+    parse();
+    // getHttp();
   }
-  void _authResponse({String response}){
+
+  //Generator Random
+  String generatorRandom() {
+    var now = new DateTime.now();
+    var formatter = new DateFormat('yyyyMMdd');
+    String formattedDate = formatter.format(now);
+    var random = new Random();
+    String k = random.nextInt( 9999-1050).toString();
+    print(formattedDate+k);
+
+    return formattedDate;
+  }
+
+  // #Auth
+  void loginAuth() {
+    MainHttps.getMain(
+            api: MainHttps.urlAuth,
+            params: MainHttps.emptParams(),
+            headers: MainHttps.headers)
+        .then((value) => {
+              _authResponse(response: value),
+            });
+  }
+
+  void _authResponse({String response}) {
     AuthModel authModel = MainHttps.parseAuth(response: response);
     setState(() {
       _authData = authModel.data;
+      getProduct(_authData.accessToken);
     });
-      print(_authData.accessToken);
   }
+
+  // #Categories
   void parse() {
-    MainHttps.getMain(api: MainHttps.urlCategories, params: MainHttps.emptParams())
+    MainHttps.getMain(
+            api: MainHttps.urlCategories,
+            params: MainHttps.emptParams(),
+            headers: MainHttps.headers)
         .then((value) => {
-
-
               getValue = value,
-
               _showResponse(getValue),
             });
   }
@@ -48,15 +89,37 @@ class _MainPageState extends State<MainPage> {
     setState(() {
       getDataMain = mainModel.data;
     });
-
   }
 
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-    loginAuth();
-    parse();
+  // #products
+  void getProduct(String accessToken) {
+    map = {"X-Access-Token": "$accessToken"};
+    MainHttps.getMain(
+            api: MainHttps.urlProduct,
+            params: MainHttps.emptParams(),
+            headers: map)
+        .then((value) => {
+              parseProduct(response: value),
+            });
+  }
+
+  void parseProduct({String response}) {
+    print(response);
+    ProductModelOne mainModel = MainHttps.parseProductOne(data: response);
+
+    setState(
+      () {
+        _productModel = mainModel.data;
+      },
+    );
+  }
+
+  void parseProductModelImages({String response}) {
+    print("=>>> " + response.toString());
+    ProductModelImages mainModel = MainHttps.parseImageOne(data: response);
+    setState(() {
+      print(mainModel.image);
+    });
   }
 
   @override
@@ -66,6 +129,20 @@ class _MainPageState extends State<MainPage> {
       backgroundColor: Color.fromRGBO(231, 234, 245, 1),
       appBar: AppBar(
         backgroundColor: Colors.white,
+        title: Text(
+          "Flowers",
+          style: TextStyle(color: Colors.black),
+        ),
+        actions: [
+          IconButton(
+              icon: Icon(
+                Icons.location_on_outlined,
+                size: 20,
+                color: Colors.black,
+              ),
+              tooltip: "Location",
+              onPressed: () {}),
+        ],
       ),
       body: SingleChildScrollView(
         child: Container(
@@ -104,15 +181,30 @@ class _MainPageState extends State<MainPage> {
                 ),
                 SizedBox(height: 10),
                 Container(
+                  margin: EdgeInsets.all(size * 0.02),
+                  child: Row(
+                    children: [
+                      Text(
+                        "All Products",
+                        style: TextStyle(
+                            fontSize: size * 0.05,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
                   width: MediaQuery.of(context).size.width,
-                  // child: ListView.builder(
-                  //   shrinkWrap: true,
-                  //   physics: NeverScrollableScrollPhysics(),
-                  //   itemCount: 8,
-                  //   itemBuilder: (context, index) {
-                  //     return _itemOfPost(getDataMain.name);
-                  //   },
-                  // ),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    physics: NeverScrollableScrollPhysics(),
+                    itemCount: _productModel.length,
+                    itemBuilder: (context, index) {
+                      return _itemOfProduct(
+                          productModel: _productModel[index], size: size);
+                    },
+                  ),
                 ),
               ],
             )),
@@ -129,28 +221,200 @@ class _MainPageState extends State<MainPage> {
       decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(size * 0.01),
           color: Colors.white),
-      child: Center(
-        child: Row(
-          children: [
-            // rgb(64,61,218)
+      child: GestureDetector(
+        child: Container(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              // rgb(64,61,218)
 
-            Icon(
-              Icons.favorite_border,
-              color: Color.fromRGBO(64, 61, 218, 1),
-            ),
-            SizedBox(
-              width: size * 0.02,
-            ),
-            FittedBox(
-              fit: BoxFit.fitWidth,
-              child: Text(
-                getDataMain.name,
-                style:
-                    TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+              Icon(
+                Icons.favorite_border,
+                color: Color.fromRGBO(64, 61, 218, 1),
+              ),
+              SizedBox(
+                width: size * 0.02,
+              ),
+              FittedBox(
+                fit: BoxFit.fitWidth,
+                child: Text(
+                  getDataMain.name,
+                  style: TextStyle(
+                      color: Colors.black, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+        ),
+        onTap: () {},
+      ),
+    );
+  }
+
+  Widget bottomSheet() {
+    List<String> myList = [
+      "Andijon",
+      "Buxoro",
+      "Guliston",
+      "Andijon",
+    ];
+  }
+
+  Widget _itemOfProduct({ProductModel productModel, double size}) {
+    return Container(
+      width: size,
+      padding: EdgeInsets.all(size * 0.03),
+      margin: EdgeInsets.all(size * 0.02),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(size * 0.02),
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            child: Container(
+              height: size * 0.35,
+              width: size * 0.3,
+              decoration: BoxDecoration(
+                image: new DecorationImage(
+                  image: NetworkImage(
+                    "https://fl.route.uz/img/" + productModel.image,
+                  ),
+                  fit: BoxFit.fill,
+                  alignment: Alignment.center,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      LikeButton(
+                        animationDuration: Duration(milliseconds: 800),
+                        size: 20,
+                        circleColor: CircleColor(
+                            start: Color(0xf00ff0f0), end: Color(0xff0099cc)),
+                        bubblesColor: BubblesColor(
+                          dotPrimaryColor: Color(0xff33b5e5),
+                          dotSecondaryColor: Color(0xff0099cc),
+                        ),
+                        likeBuilder: (bool isLiked) {
+                          return Icon(
+                            Icons.favorite,
+                            color: isLiked ? Colors.red : Colors.grey,
+                            size: 20,
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+            onTap: () {
+              ViewFlowers1.structure = productModel.structure;
+              ViewFlowers1.prices = productModel.prices;
+              ViewFlowers1.sellersId = productModel.sellersId;
+              ViewFlowers1.descriptions = productModel.descriptions;
+              ViewFlowers1.name = productModel.name;
+              ViewFlowers1.height = productModel.heigth;
+              ViewFlowers1.size = productModel.size;
+              ViewFlowers1.images = productModel.images;
+              ViewFlowers1.recommendation = productModel.recommendation;
+
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => ViewFlowers1(),
+              ));
+            },
+          ),
+          SizedBox(
+            width: size * 0.1,
+          ),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                productModel.name.toString(),
+                style: TextStyle(
+                    fontSize: size * 0.04,
+                    color: Colors.black,
+                    fontWeight: FontWeight.w600),
+              ),
+              SizedBox(
+                height: size * 0.01,
+              ),
+              Row(
+                children: [
+                  Icon(
+                    Icons.monetization_on,
+                    color: Colors.blue,
+                  ),
+                  Text(
+                    productModel.prices.toString(),
+                    style: TextStyle(
+                        fontSize: size * 0.04,
+                        color: Colors.black,
+                        fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+              SizedBox(
+                height: size * 0.01,
+              ),
+              Row(
+                children: [
+                  Icon(
+                    Icons.stars_rounded,
+                    color: Colors.yellow.shade800,
+                  ),
+                  Text(
+                    productModel.prices.toString(),
+                    style: TextStyle(
+                        fontSize: size * 0.04,
+                        color: Colors.black,
+                        fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+              SizedBox(
+                height: size * 0.01,
+              ),
+              // color: Color.fromARGB(0,184,147,1),
+
+              MaterialButton(
+                color: Colors.green,
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      backgroundColor: Colors.green,
+                      duration: Duration(milliseconds: 300),
+                      content: Text("${productModel.id}")));
+                },
+                child: Container(
+                  color: Colors.green,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.shopping_cart_outlined,
+                        color: Colors.white,
+                      ),
+                      SizedBox(
+                        width: size * 0.01,
+                      ),
+                      Text(
+                        "Buy Now",
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          )
+        ],
       ),
     );
   }

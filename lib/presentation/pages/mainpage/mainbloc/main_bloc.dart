@@ -27,16 +27,6 @@ class MainBloc extends Bloc<MainEvent, MainState> {
     }
   }
 
-  Stream<MainState> _eventLaunch(LaunchEvent event) async* {
-    yield LoadingState();
-   data =  await MainHttps.getMain(
-        api: MainHttps.urlCategories, params: MainHttps.emptParams());
 
-
-    if (data.isEmpty || data == null)
-      yield FailState(message: "Bo'sh List");
-    else
-      yield SuccessState(mainData: data);
-  }
 
 }

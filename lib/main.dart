@@ -1,17 +1,36 @@
+import 'dart:io';
+
 import 'package:awesome_bottom_navigation/awesome_bottom_navigation.dart';
-import 'package:flowers/presentation/pages/cart/carts.dart';
+import 'package:flowers/presentation/pages/cart/shopping.dart';
 import 'package:flowers/presentation/pages/favourite/favourites.dart';
 import 'package:flowers/presentation/pages/mainpage/mainpage.dart';
 import 'package:flowers/presentation/pages/settings/settings.dart';
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 
-void main() {
+
+class MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback =
+          (X509Certificate cert, String host, int port) => true;
+  }
+}
+
+void main() async {
+  // HttpOverrides.global = new MyHttpOverrides();
+  // var box = await Hive.openBox('online');
   runApp(MyApp());
 }
+
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(home:MyMain() ,);
+
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home:MyMain() ,);
   }
 }
 
@@ -22,11 +41,11 @@ class MyMain extends StatefulWidget {
 
 class _MyMainState extends State<MyMain> {
   int selectedIndex = 0;
-  Color _bgColor = Colors.white;
+
 
   var page = [
     MainPage(),
-    Carts(),
+    Shopping(),
     Favourites(),
     Settings(),
   ];
@@ -60,7 +79,7 @@ class _MyMainState extends State<MyMain> {
 
 
         bodyBgColor: Colors.white60,
-        highlightColor: Colors.white60,
+        highlightColor: Colors.blueGrey,
         // highlightColor: Colors.white.withOpacity(0.1),
 
         navFgColor: Colors.blue.shade900,
