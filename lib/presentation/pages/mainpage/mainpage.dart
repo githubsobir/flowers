@@ -8,6 +8,7 @@ import 'package:flowers/data/models/productmodel.dart';
 import 'package:flowers/presentation/pages/mainpage/viewflowers.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 
 import 'package:infinite_carousel/infinite_carousel.dart';
 import 'package:intl/intl.dart';
@@ -30,15 +31,32 @@ class _MainPageState extends State<MainPage> {
   int selectedIndex = 0;
   Map<String, String> map = {};
   List<bool> likeButton = [];
+  bool likeButtons = true;
+  var hives = Hive.box("flowerBox");
+  Map<String, dynamic> params = new Map();
 
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    generatorRandom();
-    loginAuth();
-    parse();
+
+    check();
+    /// getAccToken();
+
     // getHttp();
+  }
+
+  check() {
+    if (hives.get("token3") == null) {
+      generatorRandom();
+      print("### ${generatorRandom()}");
+      getAccToken();
+      parse();
+    } else {
+
+      _authResponse();
+      parse();
+    }
   }
 
   //Generator Random
@@ -47,29 +65,54 @@ class _MainPageState extends State<MainPage> {
     var formatter = new DateFormat('yyyyMMdd');
     String formattedDate = formatter.format(now);
     var random = new Random();
-    String k = random.nextInt( 9999-1050).toString();
-    print(formattedDate+k);
-
-    return formattedDate;
+    String k = (random.nextInt(800000) + 100000).toString();
+    print(formattedDate + k);
+    return formattedDate+k;
   }
 
-  // #Auth
-  void loginAuth() {
+  void getAccToken() {
+    Map<String, String> myMap = {"Authorization": "${generatorRandom()}"};
     MainHttps.getMain(
             api: MainHttps.urlAuth,
             params: MainHttps.emptParams(),
-            headers: MainHttps.headers)
+            headers: myMap)
         .then((value) => {
+              print("******* $value"),
               _authResponse(response: value),
             });
   }
 
+  // #Auth
+  // void loginAuth() {
+  //   MainHttps.getMain(
+  //           api: MainHttps.urlAuth,
+  //           params: MainHttps.emptParams(),
+  //           headers: MainHttps.headers)
+  //       .then((value) => {
+  //             _authResponse(response: value),
+  //           });
+  // }
+
   void _authResponse({String response}) {
-    AuthModel authModel = MainHttps.parseAuth(response: response);
-    setState(() {
-      _authData = authModel.data;
-      getProduct(_authData.accessToken);
-    });
+ if(hives.get("token3") == null){
+   AuthModel authModel = MainHttps.parseAuth(response: response);
+   setState(() {
+     _authData = authModel.data;
+     hives.put("token3", _authData.accessToken.toString());
+     print("**** token null ${hives.get("token3")}");
+     getProduct(hives.get("token3").toString());
+   });
+ }
+ else{
+   print("***** token yes");
+
+   setState(() {
+     getProduct(hives.get("token3").toString());
+   });
+
+ }
+
+
   }
 
   // #Categories
@@ -93,12 +136,15 @@ class _MainPageState extends State<MainPage> {
 
   // #products
   void getProduct(String accessToken) {
-    map = {"X-Access-Token": "$accessToken"};
+
+    map = {"X-Access-Token" : "$accessToken"};
+
     MainHttps.getMain(
             api: MainHttps.urlProduct,
             params: MainHttps.emptParams(),
             headers: map)
         .then((value) => {
+
               parseProduct(response: value),
             });
   }
@@ -119,6 +165,21 @@ class _MainPageState extends State<MainPage> {
     ProductModelImages mainModel = MainHttps.parseImageOne(data: response);
     setState(() {
       print(mainModel.image);
+    });
+  }
+
+  void addCartProduct(String id){
+    params = {"product_id":"$id"};
+    MainHttps.postMain(
+      headers:map,
+      params: params,
+      api: MainHttps.urlAddCard
+    ).then((value) =>() {
+    print("###### "+value);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        backgroundColor: Colors.green,
+        duration: Duration(milliseconds: 300),
+        content: Text("$id")));
     });
   }
 
@@ -171,12 +232,14 @@ class _MainPageState extends State<MainPage> {
                   width: MediaQuery.of(context).size.width,
                   height: size * 0.12,
                   margin: EdgeInsets.symmetric(horizontal: 10),
-                  child: ListView(
+                  child: ListView.builder(
                     scrollDirection: Axis.horizontal,
+                    itemCount: getDataMain.length,
+                    itemBuilder: (context, index) {
+                      return itemProduct(
+                          getDataMain: getDataMain[index], screenSize1: size);
+                    },
                     shrinkWrap: true,
-                    children: getDataMain.map((e) {
-                      return _itemOfStory(e, size);
-                    }).toList(),
                   ),
                 ),
                 SizedBox(height: 10),
@@ -258,6 +321,29 @@ class _MainPageState extends State<MainPage> {
       "Guliston",
       "Andijon",
     ];
+  }
+
+  Widget itemProduct({GetDataMain getDataMain, double screenSize1}) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 5),
+      padding: EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+              onTap: () {
+                print(getDataMain.id);
+                setState(() {
+                  _itemOfProduct();
+                });
+              },
+              child: Text("${getDataMain.name}")),
+        ],
+      ),
+    );
   }
 
   Widget _itemOfProduct({ProductModel productModel, double size}) {
@@ -386,10 +472,10 @@ class _MainPageState extends State<MainPage> {
               MaterialButton(
                 color: Colors.green,
                 onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      backgroundColor: Colors.green,
-                      duration: Duration(milliseconds: 300),
-                      content: Text("${productModel.id}")));
+                  addCartProduct("${productModel.id}");
+
+
+
                 },
                 child: Container(
                   color: Colors.green,

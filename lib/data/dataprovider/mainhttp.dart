@@ -7,13 +7,14 @@ import 'package:http/http.dart';
 class MainHttps {
   //http://fl.route.uz/clintapi/category
   //http://fl.route.uz/clintapi/products
-  static String baseUrl = "fl.route.uz";
+  static String baseUrl = "api.darxonschool.uz";
   static Map<String, String> headers = {
     "Content-type": "application/json; charset=UTF-8"
   };
   static String urlCategories = "/clintapi/category";
   static String urlAuth = "/clintapi/auth";
   static String urlProduct = "/clintapi/products";
+  static String urlAddCard = "clintapi/cart/add-cart";
 
   static Map<String, dynamic> emptParams() {
     Map<String, dynamic> maps = new Map();
@@ -24,8 +25,27 @@ class MainHttps {
       {String api,
       Map<String, dynamic> params,
       Map<String, String> headers}) async {
-    var uri = Uri.https(baseUrl, api);
+    var uri = Uri.http(baseUrl, api);
     var response = await get(uri, headers: headers);
+    print("### url: " + uri.toString());
+    print("### header: " + headers.toString());
+    print("##### data: " + response.body);
+    if (response.statusCode == 200) {
+      return response.body;
+    } else
+      return null;
+  }
+
+  /// post
+  static Future<String> postMain(
+      {String api,
+      Map<String, dynamic> params,
+      Map<String, String> headers}) async {
+    var uri = Uri.http(baseUrl, api);
+    var response = await post(uri, headers: headers, body: jsonEncode(params));
+    print("### url: " + uri.toString());
+    print("### header: " + headers.toString());
+    print("##### data: " + response.body);
     if (response.statusCode == 200) {
       return response.body;
     } else

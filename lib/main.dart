@@ -6,10 +6,11 @@ import 'package:flowers/presentation/pages/favourite/favourites.dart';
 import 'package:flowers/presentation/pages/mainpage/mainpage.dart';
 import 'package:flowers/presentation/pages/settings/settings.dart';
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:hive/hive.dart';
 
 
-class MyHttpOverrides extends HttpOverrides {
+class MyHttpOverrides  extends HttpOverrides {
   @override
   HttpClient createHttpClient(SecurityContext context) {
     return super.createHttpClient(context)
@@ -19,8 +20,10 @@ class MyHttpOverrides extends HttpOverrides {
 }
 
 void main() async {
-  // HttpOverrides.global = new MyHttpOverrides();
-  // var box = await Hive.openBox('online');
+  HttpOverrides.global = new MyHttpOverrides();
+  await Hive.initFlutter();
+  await Hive.openBox("flowerBox");
+
   runApp(MyApp());
 }
 
