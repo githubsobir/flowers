@@ -176,10 +176,7 @@ class _MainPageState extends State<MainPage> {
       api: MainHttps.urlAddCard
     ).then((value) =>() {
     print("###### "+value);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        backgroundColor: Colors.green,
-        duration: Duration(milliseconds: 300),
-        content: Text("$id")));
+
     });
   }
 
@@ -473,7 +470,10 @@ class _MainPageState extends State<MainPage> {
                 color: Colors.green,
                 onPressed: () {
                   addCartProduct("${productModel.id}");
-
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      backgroundColor: Colors.green,
+                      duration: Duration(milliseconds: 300),
+                      content: Text("${productModel.id}")));
 
 
                 },
